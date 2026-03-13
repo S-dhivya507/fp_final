@@ -6,7 +6,9 @@ services:
     rootDir: web_app
     buildCommand: |
       apt-get update
-      apt-get install -y ffmpeg
+      apt-get install -y ffmpeg git-lfs
+      git lfs install
+      git lfs pull
       pip install -r requirements.txt
     startCommand: gunicorn app:app
     autoDeploy: true
