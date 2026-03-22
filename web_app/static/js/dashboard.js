@@ -414,7 +414,8 @@ function displayEmotionBars(containerId, emotions, title) {
     container.innerHTML = '';
 
     emotionLabels.forEach(emotion => {
-        const score = parseFloat(emotions[emotion] || 0);
+        const raw = parseFloat(emotions[emotion] || 0);
+        const score = Math.min(100, Math.max(0, raw));
         const bar = document.createElement('div');
         bar.className = 'emotion-bar';
         bar.innerHTML = `
@@ -447,7 +448,8 @@ function normalizeEmotions(emotions) {
     const normalized = {};
     emotionLabels.forEach(label => {
         const value = Number(emotions[label]);
-        normalized[label] = Number.isFinite(value) ? value : 0;
+        const safe = Number.isFinite(value) ? value : 0;
+        normalized[label] = Math.min(100, Math.max(0, safe));
     });
     return normalized;
 }

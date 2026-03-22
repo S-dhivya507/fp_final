@@ -39,11 +39,20 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 try:
     face_model = load_model(os.path.join(BASE_DIR, "models", "face_emotion_model.h5"))
-    voice_model = load_model(os.path.join(BASE_DIR, "voice_module", "shemo_emotion_model.h5"))
+    voice_model = load_model(os.path.join(BASE_DIR, "voice_module", "voice_emotion_model.h5"))
     with open(os.path.join(BASE_DIR, "voice_module", "label_encoder.pkl"), "rb") as f:
         voice_encoder = pickle.load(f)
 
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    if face_cascade.empty():
+        raise RuntimeError("Failed to load Haar cascade for face detection.")
+    # Capture expected voice input shape if available (e.g., (None, 40, 174, 1))
+    voice_input_shape = getattr(voice_model, "input_shape", None)
+    voice_expected_mfcc = None
+    voice_expected_frames = None
+    if voice_input_shape and len(voice_input_shape) >= 3:
+        voice_expected_mfcc = voice_input_shape[1]
+        voice_expected_frames = voice_input_shape[2]
     models_loaded = True
     print("Models loaded")
 except Exception as e:
@@ -75,6 +84,9 @@ def convert_numpy_to_python(obj):
 
 # ================= VIDEO =================
 def detect_faces_multi(gray):
+    if not models_loaded or face_cascade is None or face_cascade.empty():
+        return (), gray
+
     gray_eq = clahe.apply(gray)
     passes = [
         (gray_eq, 1.05, 3),
@@ -83,10 +95,16 @@ def detect_faces_multi(gray):
     ]
 
     h, w = gray.shape[:2]
+    if h < 60 or w < 60:
+        return (), gray_eq
     min_w = max(int(w * 0.2), 80)
     min_h = max(int(h * 0.2), 80)
     max_w = int(w * 0.8)
     max_h = int(h * 0.8)
+    min_w = min(min_w, w)
+    min_h = min(min_h, h)
+    max_w = min(max_w, w)
+    max_h = min(max_h, h)
 
     for img, scale, neighbors in passes:
         faces = face_cascade.detectMultiScale(
@@ -179,6 +197,10 @@ def detect_emotions_from_video_file(video_path, duration=VIDEO_DURATION):
     fps = cap.get(cv2.CAP_PROP_FPS)
     if not fps or fps <= 0:
         fps = 20.0
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) if cap.get(cv2.CAP_PROP_FRAME_COUNT) else 0
+    max_frames = int(duration * fps) if duration else total_frames
+    if total_frames and max_frames > total_frames:
+        max_frames = total_frames
 
     writer = None
     labeled_path = None
@@ -193,12 +215,15 @@ def detect_emotions_from_video_file(video_path, duration=VIDEO_DURATION):
 
     face_counter = Counter()
     face_frames = 0
-    start_time = time.time()
+    frame_idx = 0
 
-    while time.time() - start_time < duration:
+    while True:
+        if max_frames and frame_idx >= max_frames:
+            break
         ret, frame = cap.read()
         if not ret:
             break
+        frame_idx += 1
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces, gray_used = detect_faces_multi(gray)
         emotions = detect_face_emotions_from_faces(gray_used, faces)
@@ -406,20 +431,19 @@ def detect_emotions_from_audio(audio_file):
             audio, sr = librosa.load(audio_file, sr=SAMPLE_RATE)
             audio = librosa.util.normalize(audio)
 
-        mfcc = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=40)
-        chroma = librosa.feature.chroma_stft(y=audio, sr=sr)
-        mel = librosa.feature.melspectrogram(y=audio, sr=sr)
+        # Use MFCC-only features to match the model input shape.
+        n_mfcc = voice_expected_mfcc or 40
+        target_frames = voice_expected_frames or 174
 
-        combined = np.vstack((mfcc, chroma, mel))
-
-        if combined.shape[1] < 200:
-            combined = np.pad(combined, ((0, 0), (0, 200 - combined.shape[1])))
+        mfcc = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=n_mfcc)
+        if mfcc.shape[1] < target_frames:
+            mfcc = np.pad(mfcc, ((0, 0), (0, target_frames - mfcc.shape[1])))
         else:
-            combined = combined[:, :200]
+            mfcc = mfcc[:, :target_frames]
 
-        combined = combined.reshape(1, combined.shape[0], combined.shape[1], 1)
+        features = mfcc.reshape(1, mfcc.shape[0], mfcc.shape[1], 1)
 
-        probs = voice_model.predict(combined, verbose=0)[0]
+        probs = voice_model.predict(features, verbose=0)[0]
         return probs
 
     except Exception as e:
@@ -523,6 +547,12 @@ def start_recording():
         voice_probs = detect_emotions_from_audio(audio_file)
 
         print("Voice probs:", voice_probs)
+
+        if voice_probs is None:
+            if voice_encoder is not None:
+                voice_probs = np.zeros(len(voice_encoder.classes_), dtype=np.float32)
+            else:
+                voice_probs = np.zeros(len(face_labels), dtype=np.float32)
 
         fused_emotions = fuse_emotions(face_emotions, voice_probs)
         stress_level = calculate_stress_level(fused_emotions)
@@ -653,6 +683,12 @@ def upload_analysis():
             if extracted_audio:
                 voice_probs = detect_emotions_from_audio(extracted_audio)
                 audio_url = f"/uploads/{os.path.basename(extracted_audio)}"
+
+        if voice_probs is None:
+            if voice_encoder is not None:
+                voice_probs = np.zeros(len(voice_encoder.classes_), dtype=np.float32)
+            else:
+                voice_probs = np.zeros(len(face_labels), dtype=np.float32)
 
         fused_emotions = fuse_emotions(face_emotions, voice_probs)
         stress_level = calculate_stress_level(fused_emotions)
