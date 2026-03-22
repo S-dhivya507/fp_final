@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - Stress Detection System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}">
+    <!-- <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"> -->
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-logo">
+                <i class="fas fa-brain"></i> Stress Detection System
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/dashboard" class="nav-link">Dashboard</a></li>
+                <li><a href="/about" class="nav-link">About</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Error Container -->
+    <div class="main-container">
+        <div style="text-align: center; padding: 4rem 2rem;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 5rem; color: #f97316; margin-bottom: 2rem;"></i>
+            <h1 style="font-size: 2.5rem; margin: 1rem 0;">Oops! Something went wrong</h1>
+            <p style="font-size: 1.125rem; color: #cbd5e1; margin-bottom: 2rem;">{{ error }}</p>
+            <a href="/" class="btn btn-primary">
+                <i class="fas fa-home"></i> Back to Home
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2024 Stress & Emotion Detection System | Final Year Project</p>
+    </footer>
+</body>
+</html>

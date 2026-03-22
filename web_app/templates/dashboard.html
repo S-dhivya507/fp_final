@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stress & Emotion Detection System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}">
+    <!-- <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"> -->
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-logo">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Stress Detection System logo">
+                <span>Stress Detection System</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/dashboard" class="nav-link active">Dashboard</a></li>
+                <li><a href="#" class="nav-link">About</a></li>
+            </ul>
+        </div>
+    </nav> 
+
+    <!--Main Container -->
+    <div class="main-container dashboard-shell">
+        <!-- Header Section -->
+        <div class="dashboard-hero">
+            <div class="hero-text">
+                <h1>Real-Time Emotion & Stress Analysis</h1>
+                <p>Track live capture with clear timers, then review insights with fused face and voice signals.</p>
+                <div class="hero-chips">
+                    <span class="chip"><i class="fas fa-video"></i> Video: 5s</span>
+                    <span class="chip"><i class="fas fa-microphone"></i> Audio: 5s</span>
+                    <span class="chip chip-outline"><i class="fas fa-chart-bar"></i> Chart.js Analysis</span>
+                </div>
+            </div>
+            <div class="hero-panel">
+                <div class="hero-stat">
+                    <span class="stat-label">Capture Mode</span>
+                    <span class="stat-value" id="captureMode">Live Recording</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="stat-label">System Status</span>
+                    <span class="stat-value" id="systemStatus">Idle</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="stat-label">Last Run</span>
+                    <span class="stat-value" id="lastRun">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Capture Panel -->
+        <section class="panel capture-panel">
+            <div class="panel-header">
+                <div>
+                    <h2>Live Capture Controls</h2>
+                    <p>Start the session to capture video, then audio. Timers and indicators update in real-time.</p>
+                </div>
+                <div class="panel-actions">
+                    <button class="btn btn-primary" id="startRecordingBtn" onclick="startRecording()">
+                        <i class="fas fa-video"></i> Start Analysis
+                    </button>
+                    <button class="btn btn-secondary" id="quickAnalysisBtn" onclick="quickAnalysis()">
+                        <i class="fas fa-flash"></i> Quick Demo
+                    </button>
+                </div>
+            </div>
+
+            <div class="capture-grid">
+                <div class="capture-progress">
+                    <div class="progress-container" id="progressContainer" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <p id="progressText">Initializing...</p>
+                    </div>
+                    <div class="capture-steps">
+                        <div class="step-card" id="stepVideo">
+                            <span class="step-number">1</span>
+                            <div class="step-text">
+                                <h4>Video Capture</h4>
+                                <p>Camera active for facial emotion signals.</p>
+                            </div>
+                        </div>
+                        <div class="step-card" id="stepAudio">
+                            <span class="step-number">2</span>
+                            <div class="step-text">
+                                <h4>Audio Recording</h4>
+                                <p>Microphone active for voice analysis.</p>
+                            </div>
+                        </div>
+                        <div class="step-card" id="stepFuse">
+                            <span class="step-number">3</span>
+                            <div class="step-text">
+                                <h4>Fusion</h4>
+                                <p>Combine signals and render results.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="capture-status">
+                    <div class="status-card" id="videoStatusCard">
+                        <div class="status-top">
+                            <span class="status-dot idle" id="videoDot"></span>
+                            <span class="status-title">Video Capture</span>
+                            <span class="status-tag" id="videoStatus">Idle</span>
+                        </div>
+                        <div class="timer" id="videoTimer">00:05</div>
+                        <div class="meter">
+                            <div class="meter-fill" id="videoMeter"></div>
+                        </div>
+                        <div class="status-hint" id="videoHint">Ready to capture facial data.</div>
+                    </div>
+
+                    <div class="status-card" id="audioStatusCard">
+                        <div class="status-top">
+                            <span class="status-dot idle" id="audioDot"></span>
+                            <span class="status-title">Audio Recording</span>
+                            <span class="status-tag" id="audioStatus">Idle</span>
+                        </div>
+                        <div class="timer" id="audioTimer">00:05</div>
+                        <div class="meter">
+                            <div class="meter-fill" id="audioMeter"></div>
+                        </div>
+                        <div class="status-hint" id="audioHint">Ready to capture voice signals.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Import Panel -->
+        <section class="panel import-panel">
+            <div class="panel-header">
+                <div>
+                    <h2>Import Video & Audio</h2>
+                    <p>Upload existing files to run analysis and render charts instantly.</p>
+                </div>
+                <div class="panel-actions">
+                    <button class="btn btn-primary" id="uploadAnalysisBtn" onclick="uploadAnalysis()">
+                        <i class="fas fa-cloud-upload-alt"></i> Analyze Files
+                    </button>
+                </div>
+            </div>
+            <div class="import-grid">
+                <div class="file-field">
+                    <label for="videoFile">Video File (MP4 / MOV / AVI)</label>
+                    <input type="file" id="videoFile" accept="video/*">
+                </div>
+                <div class="file-field">
+                    <label for="audioFile">Audio File (WAV / MP3)</label>
+                    <input type="file" id="audioFile" accept="audio/*">
+                </div>
+                <div class="import-status" id="uploadStatus">
+                    <i class="fas fa-info-circle"></i>
+                    <span>No files selected.</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Grid -->
+        <div class="results-grid" id="resultsGrid" style="display: none;">
+            
+            <!-- Stress Level Card -->
+            <div class="card stress-card">
+                <div class="card-header">
+                    <h2>Stress Level</h2>
+                </div>
+                <div class="stress-indicator" id="stressIndicator">
+                    <div class="stress-gauge">
+                        <svg viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="40" class="gauge-bg"></circle>
+                            <circle cx="50" cy="50" r="40" class="gauge-fill" id="gaugeFill"></circle>
+                            <text x="50" y="60" text-anchor="middle" class="gauge-text" id="stressValue">--</text>
+                        </svg>
+                    </div>
+                    <h3 id="stressLevel">--</h3>
+                </div>
+            </div>
+
+            <!-- Emotion Distribution -->
+            <div class="card emotion-card">
+                <div class="card-header">
+                    <h2>Emotion Distribution</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="emotionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Emotion Details -->
+            <div class="card details-card">
+                <div class="card-header">
+                    <h2>Detailed Analysis</h2>
+                </div>
+                <div id="emotionDetails" class="emotion-details">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Face Emotions -->
+            <div class="card face-card">
+                <div class="card-header">
+                    <h2>Face Analysis</h2>
+                </div>
+                <div id="faceEmotions" class="emotion-bars">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Voice Emotions -->
+            <div class="card voice-card">
+                <div class="card-header">
+                    <h2>Voice Analysis</h2>
+                </div>
+                <div id="voiceEmotions" class="emotion-bars">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Captured Media -->
+            <div class="card media-card">
+                <div class="card-header">
+                    <h2>Captured Media</h2>
+                </div>
+                <div class="media-grid">
+                    <div class="media-block">
+                        <h4>Video</h4>
+                        <div class="media-preview" id="videoPreview">No video available yet.</div>
+                        <p class="media-note" id="videoPreviewNote" style="display: none;"></p>
+                        <a class="media-link" id="videoLink" href="#" target="_blank" rel="noopener" style="display: none;">Open video file</a>
+                    </div>
+                    <div class="media-block">
+                        <h4>Audio</h4>
+                        <div class="media-preview" id="audioPreview">No audio available yet.</div>
+                        <a class="media-link" id="audioLink" href="#" target="_blank" rel="noopener" style="display: none;">Open audio file</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="card recommendations-card">
+                <div class="card-header">
+                    <h2>Recommendations</h2>
+                </div>
+                <div id="recommendations" class="recommendations-list">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState">
+            <i class="fas fa-chart-bar"></i>
+            <p>Start a live capture or upload files to generate analysis.</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2024 Stress & Emotion Detection System | Final Year Project</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html> 

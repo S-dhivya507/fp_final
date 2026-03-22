@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stress & Emotion Detection - Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"> -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}">
+    <!-- <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"> -->
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-logo">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Stress Detection System logo">
+                <span>Stress Detection System</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link active">Home</a></li>
+                <li><a href="/dashboard" class="nav-link">Dashboard</a></li>
+                <li><a href="#" class="nav-link">About</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="hero-content">
+            <h1>Real-Time Stress & Emotion Detection</h1>
+            <p>Analyze your emotional state using advanced AI and machine learning</p>
+            <a href="/dashboard" class="btn btn-large btn-primary">
+                <i class="fas fa-arrow-right"></i> Start Analysis
+            </a>
+        </div>
+        <div class="hero-image">
+            <i class="fas fa-user-friends"></i>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="features-section">
+        <h2>Key Features</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-camera"></i>
+                </div>
+                <h3>Facial Recognition</h3>
+                <p>Real-time emotion detection through advanced computer vision</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-microphone"></i>
+                </div>
+                <h3>Voice Analysis</h3>
+                <p>Detect emotional patterns from speech and tone</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+                <h3>Smart Fusion</h3>
+                <p>Combine face and voice data for accurate stress assessment</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h3>AI-Powered</h3>
+                <p>Deep learning models trained on large emotion datasets</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <h3>Real-Time</h3>
+                <p>Instant analysis with live feedback and visualization</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-bar-chart"></i>
+                </div>
+                <h3>Detailed Reports</h3>
+                <p>Comprehensive analysis with actionable recommendations</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- How It Works Section -->
+    <div class="how-it-works">
+        <h2>How It Works</h2>
+        <div class="steps-container">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Start Recording</h3>
+                <p>Begin a 60-second session where the system captures your video and audio</p>
+            </div>
+
+            <div class="step-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>Analysis</h3>
+                <p>AI models analyze facial expressions and voice patterns simultaneously</p>
+            </div>
+
+            <div class="step-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Results</h3>
+                <p>Get detailed emotion breakdown and overall stress level assessment</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emotions Section -->
+    <div class="emotions-section">
+        <h2>Detected Emotions</h2>
+        <div class="emotions-grid">
+            <div class="emotion-badge happy">
+                <i class="fas fa-smile"></i>
+                <span>Happy</span>
+            </div>
+            <div class="emotion-badge neutral">
+                <i class="fas fa-meh"></i>
+                <span>Neutral</span>
+            </div>
+            <div class="emotion-badge sad">
+                <i class="fas fa-frown"></i>
+                <span>Sad</span>
+            </div>
+            <div class="emotion-badge angry">
+                <i class="fas fa-angry"></i>
+                <span>Angry</span>
+            </div>
+            <div class="emotion-badge fear">
+                <i class="fas fa-tired"></i>
+                <span>Fear</span>
+            </div>
+            <div class="emotion-badge disgust">
+                <i class="fas fa-face-sad-tear"></i>
+                <span>Disgust</span>
+            </div>
+            <div class="emotion-badge surprise">
+                <i class="fas fa-surprise"></i>
+                <span>Surprise</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA Section -->
+    <div class="cta-section">
+        <h2>Ready to Analyze Your Emotions?</h2>
+        <p>Start your real-time stress detection analysis now</p>
+        <a href="/dashboard" class="btn btn-primary">
+            <i class="fas fa-play-circle"></i> Begin Now
+        </a>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2024 Stress & Emotion Detection System | Final Year Project</p>
+    </footer>
+</body>
+</html>
