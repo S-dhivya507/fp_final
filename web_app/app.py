@@ -13,10 +13,7 @@ import numpy as np
 import pickle
 import librosa
 from scipy.io.wavfile import write, read
-try:
-    import tf_keras as keras
-except Exception:
-    from tensorflow import keras
+from tensorflow import keras
 from collections import Counter
 import time
 from datetime import datetime
