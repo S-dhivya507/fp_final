@@ -4,7 +4,6 @@ Flask Web Dashboard for Final Year Project
 """
 
 import os
-os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
 
 from flask import Flask, render_template, jsonify, request, send_from_directory
 from werkzeug.utils import secure_filename
