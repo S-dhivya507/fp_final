@@ -62,8 +62,8 @@ except Exception as e:
 
 # ================= CONFIG =================
 SAMPLE_RATE = 22050
-AUDIO_DURATION = 60
-VIDEO_DURATION = 60
+AUDIO_DURATION = 10
+VIDEO_DURATION = 10
 
 face_labels = ["Angry", "Disgust", "Fear", "Happy", "Neutral", "Sad", "Surprise"]
 clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
@@ -80,6 +80,26 @@ def convert_numpy_to_python(obj):
     if isinstance(obj, list):
         return [convert_numpy_to_python(i) for i in obj]
     return obj
+
+
+def face_counts_to_percentages(face_counts):
+    total = sum(face_counts.values()) if face_counts else 0
+    if not total:
+        return {label: 0 for label in face_labels}
+    return {label: round((face_counts.get(label, 0) / total) * 100, 2) for label in face_labels}
+
+
+def cleanup_uploads(keep_names):
+    keep = set(keep_names or [])
+    for name in os.listdir(app.config["UPLOAD_FOLDER"]):
+        if name in keep:
+            continue
+        path = os.path.join(app.config["UPLOAD_FOLDER"], name)
+        if os.path.isfile(path):
+            try:
+                os.remove(path)
+            except Exception:
+                pass
 
 
 # ================= VIDEO =================
@@ -471,6 +491,16 @@ def fuse_emotions(face_data, voice_probs):
     return results
 
 
+def voice_probs_to_percentages(voice_probs):
+    if voice_probs is None or voice_encoder is None:
+        return {label: 0 for label in face_labels}
+    results = {label: 0 for label in face_labels}
+    for idx, label in enumerate(voice_encoder.classes_):
+        if idx < len(voice_probs) and label in results:
+            results[label] = round(float(voice_probs[idx] * 100), 2)
+    return results
+
+
 def calculate_stress_level(scores):
     stress_emotions = ["Angry", "Disgust", "Fear", "Sad"]
     stress_score = sum(scores.get(e, 0) for e in stress_emotions)
@@ -507,6 +537,10 @@ def app_specific(filename):
 @app.route("/favicon.ico")
 def favicon():
     return send_from_directory(os.path.join(app.root_path, "static"), "favicon.ico")
+
+@app.route("/models/<path:filename>")
+def face_api_models(filename):
+    return send_from_directory(os.path.join(app.root_path, "face_api_models"), filename)
 
 
 @app.route("/Roboto-Regular.ttf")
@@ -556,11 +590,15 @@ def start_recording():
 
         fused_emotions = fuse_emotions(face_emotions, voice_probs)
         stress_level = calculate_stress_level(fused_emotions)
+        face_emotions_percent = face_counts_to_percentages(face_emotions)
+        voice_emotions_percent = voice_probs_to_percentages(voice_probs)
 
         response_data = {
             "success": True,
-            "face_emotions": face_emotions,
+            "face_emotions": face_emotions_percent,
             "voice_probs": voice_probs.tolist() if voice_probs is not None else None,
+            "voice_emotions": voice_emotions_percent,
+            "voice_labels": list(voice_encoder.classes_) if voice_encoder is not None else [],
             "fused_emotions": fused_emotions,
             "stress_level": stress_level,
             "video_file": f"/uploads/{video_name}" if video_name else None,
@@ -572,6 +610,10 @@ def start_recording():
         }
 
         response_data = convert_numpy_to_python(response_data)
+        keep_files = [audio_name]
+        if video_name:
+            keep_files.append(video_name)
+        cleanup_uploads(keep_files)
         return jsonify(response_data)
 
     except Exception as e:
@@ -692,11 +734,15 @@ def upload_analysis():
 
         fused_emotions = fuse_emotions(face_emotions, voice_probs)
         stress_level = calculate_stress_level(fused_emotions)
+        face_emotions_percent = face_counts_to_percentages(face_emotions)
+        voice_emotions_percent = voice_probs_to_percentages(voice_probs)
 
         response_data = {
             "success": True,
-            "face_emotions": face_emotions,
+            "face_emotions": face_emotions_percent,
             "voice_probs": voice_probs.tolist() if voice_probs is not None else None,
+            "voice_emotions": voice_emotions_percent,
+            "voice_labels": list(voice_encoder.classes_) if voice_encoder is not None else [],
             "fused_emotions": fused_emotions,
             "stress_level": stress_level,
             "video_file": video_url,
@@ -707,6 +753,12 @@ def upload_analysis():
             "video_error": video_error,
         }
 
+        keep_files = []
+        if video_url:
+            keep_files.append(os.path.basename(video_url))
+        if audio_url:
+            keep_files.append(os.path.basename(audio_url))
+        cleanup_uploads(keep_files)
         return jsonify(convert_numpy_to_python(response_data))
 
     except Exception as e:

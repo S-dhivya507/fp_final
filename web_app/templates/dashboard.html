@@ -32,8 +32,8 @@
                 <h1>Real-Time Emotion & Stress Analysis</h1>
                 <p>Track live capture with clear timers, then review insights with fused face and voice signals.</p>
                 <div class="hero-chips">
-                    <span class="chip"><i class="fas fa-video"></i> Video: 5s</span>
-                    <span class="chip"><i class="fas fa-microphone"></i> Audio: 5s</span>
+                    <span class="chip"><i class="fas fa-video"></i> Video: 10s</span>
+                    <span class="chip"><i class="fas fa-microphone"></i> Audio: 10s</span>
                     <span class="chip chip-outline"><i class="fas fa-chart-bar"></i> Chart.js Analysis</span>
                 </div>
             </div>
@@ -129,9 +129,22 @@
                         </div>
                         <div class="status-hint" id="audioHint">Ready to capture voice signals.</div>
                     </div>
+
                 </div>
             </div>
         </section>
+
+        <div class="live-overlay" id="liveOverlay" aria-hidden="true">
+            <div class="live-overlay-card">
+                <div class="live-overlay-header">
+                    <span>Live Video Capture</span>
+                    <span class="live-overlay-tag" id="liveOverlayStatus">Recording</span>
+                </div>
+                <div class="live-overlay-body">
+                    <video id="liveOverlayVideo" autoplay muted playsinline></video>
+                </div>
+            </div>
+        </div>
 
         <!-- Import Panel -->
         <section class="panel import-panel">

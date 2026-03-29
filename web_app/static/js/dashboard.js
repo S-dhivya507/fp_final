@@ -3,9 +3,10 @@
 // // =====================================================
 
 let emotionChart = null;
+let liveOverlayStream = null;
 const emotionLabels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise'];
-const VIDEO_DURATION = 60;
-const AUDIO_DURATION = 60;
+const VIDEO_DURATION = 10;
+const AUDIO_DURATION = 10;
 const emotionIcons = {
     'Angry': '😠',
     'Disgust': '🤢',
@@ -60,9 +61,12 @@ async function startRecording() {
 
         captureSequence = runCaptureSequence();
 
-        const blob = await recordBrowserCapture(VIDEO_DURATION * 1000);
+        const timestamp = Date.now();
+        const videoBlob = await recordBrowserVideo(VIDEO_DURATION * 1000);
+        const audioBlob = await recordBrowserAudio(AUDIO_DURATION * 1000);
         const formData = new FormData();
-        formData.append('video', blob, `live_${Date.now()}.webm`);
+        formData.append('video', videoBlob, `live_${timestamp}.webm`);
+        formData.append('audio', audioBlob, `live_${timestamp}.webm`);
 
         const response = await fetch('/api/upload-analysis', {
             method: 'POST',
@@ -95,15 +99,17 @@ async function startRecording() {
         if (captureSequence) captureSequence.cancel();
         setCaptureError();
         systemStatus.textContent = 'Error';
+    } finally {
+        stopLivePreview();
     }
 }
 
-async function recordBrowserCapture(durationMs) {
+async function recordBrowserVideo(durationMs) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('Browser media capture is not supported.');
     }
 
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
     const mimeTypes = [
         'video/webm;codecs=vp9,opus',
         'video/webm;codecs=vp8,opus',
@@ -135,6 +141,46 @@ async function recordBrowserCapture(durationMs) {
     stream.getTracks().forEach((track) => track.stop());
 
     const type = recorder.mimeType || 'video/webm';
+    return new Blob(chunks, { type });
+}
+
+async function recordBrowserAudio(durationMs) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Browser media capture is not supported.');
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+    const mimeTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus'
+    ];
+    let options = {};
+    for (const type of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(type)) {
+            options = { mimeType: type };
+            break;
+        }
+    }
+
+    const recorder = new MediaRecorder(stream, options);
+    const chunks = [];
+
+    const stopped = new Promise((resolve, reject) => {
+        recorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) chunks.push(event.data);
+        };
+        recorder.onerror = () => reject(new Error('Recording failed'));
+        recorder.onstop = () => resolve();
+    });
+
+    recorder.start();
+    setTimeout(() => recorder.stop(), durationMs);
+    await stopped;
+
+    stream.getTracks().forEach((track) => track.stop());
+
+    const type = recorder.mimeType || 'audio/webm';
     return new Blob(chunks, { type });
 }
 
@@ -246,22 +292,23 @@ async function uploadAnalysis() {
 // // =====================================================
 
 function displayResults(data) {
-    const { fused_emotions, stress_level, face_emotions, voice_probs } = data;
+    const { fused_emotions, stress_level, face_emotions, voice_probs, voice_emotions } = data;
 
     // Display stress indicator
-    const normalizedFused = normalizeEmotions(fused_emotions || {});
-    displayStressIndicator(stress_level, normalizedFused);
+    const fused = ensureEmotionMap(fused_emotions || {});
+    displayStressIndicator(stress_level, fused);
 
     // Display emotion chart
-    displayEmotionChart(normalizedFused);
+    displayEmotionChart(fused);
 
     // Display emotion details
-    displayEmotionDetails(normalizedFused);
+    displayEmotionDetails(fused);
+
 
     // Display face emotions
     if (face_emotions) {
-        const normalizedFace = normalizeEmotions(face_emotions);
-        displayEmotionBars('faceEmotions', normalizedFace, 'Face Analysis');
+        const faceMap = ensureEmotionMap(face_emotions);
+        displayEmotionBars('faceEmotions', faceMap, 'Face Analysis');
         if (data.face_detected === false) {
             const faceContainer = document.getElementById('faceEmotions');
             faceContainer.innerHTML = '<div class="empty-inline">No face detected. Please face the camera directly and try again.</div>';
@@ -269,13 +316,16 @@ function displayResults(data) {
     }
 
     // Display voice emotions
-    if (voice_probs) {
-        const voiceEmotions = {};
+    if (voice_emotions) {
+        const voiceMap = ensureEmotionMap(voice_emotions);
+        displayEmotionBars('voiceEmotions', voiceMap, 'Voice Analysis');
+    } else if (voice_probs) {
+        const voiceMap = {};
         emotionLabels.forEach((emotion, idx) => {
             const value = Number(voice_probs[idx]);
-            voiceEmotions[emotion] = Number.isFinite(value) ? value * 100 : 0;
+            voiceMap[emotion] = Number.isFinite(value) ? value * 100 : 0;
         });
-        displayEmotionBars('voiceEmotions', normalizeEmotions(voiceEmotions), 'Voice Analysis');
+        displayEmotionBars('voiceEmotions', ensureEmotionMap(voiceMap), 'Voice Analysis');
     }
 
     // Display recommendations
@@ -364,7 +414,7 @@ function displayEmotionChart(emotions) {
                     grid: { color: 'rgba(148, 163, 184, 0.1)' }
                 },
                 x: {
-                    ticks: { color: '#cbd5e1' },
+                    ticks: { color: '#cbd5e1', autoSkip: false, maxRotation: 0, minRotation: 0, font: { size: 10 } },
                     grid: { display: false }
                 }
             },
@@ -390,11 +440,8 @@ function displayEmotionDetails(emotions) {
     const container = document.getElementById('emotionDetails');
     container.innerHTML = '';
 
-    const sorted = emotionLabels
-        .map(label => [label, Number(emotions[label]) || 0])
-        .sort(([, a], [, b]) => b - a);
-
-    sorted.forEach(([emotion, score]) => {
+    emotionLabels.forEach((emotion) => {
+        const score = Number(emotions[emotion]) || 0;
         const item = document.createElement('div');
         item.className = 'emotion-item';
         item.innerHTML = `
@@ -444,7 +491,7 @@ function getEmotionColor(emotion) {
     return colors[emotion] || '#3b82f6';
 }
 
-function normalizeEmotions(emotions) {
+function ensureEmotionMap(emotions) {
     const normalized = {};
     emotionLabels.forEach(label => {
         const value = Number(emotions[label]);
@@ -573,6 +620,7 @@ function runCaptureSequence() {
     let cancelled = false;
 
     const sequence = (async () => {
+        await startLiveOverlay();
         setStepState('stepVideo', 'active');
         setStatusState('video', 'recording', 'Recording', 'Capturing facial signals...');
         updateProgress(30, 'Capturing video...');
@@ -580,6 +628,7 @@ function runCaptureSequence() {
         if (cancelled) return;
         setStatusState('video', 'complete', 'Complete', 'Video capture complete.');
         setStepState('stepVideo', 'done');
+        stopLiveOverlay();
 
         setStepState('stepAudio', 'active');
         setStatusState('audio', 'recording', 'Recording', 'Capturing voice signals...');
@@ -600,11 +649,49 @@ function runCaptureSequence() {
             setStatusState('video', 'complete', 'Complete', 'Video capture complete.');
             setStatusState('audio', 'complete', 'Complete', 'Audio recording complete.');
             updateProgress(100, 'Analysis complete.');
+            stopLiveOverlay();
         },
         cancel: () => {
             cancelled = true;
+            stopLiveOverlay();
         }
     };
+}
+
+async function startLiveOverlay() {
+    const overlay = document.getElementById('liveOverlay');
+    const videoEl = document.getElementById('liveOverlayVideo');
+    const tag = document.getElementById('liveOverlayStatus');
+
+    if (!overlay || !videoEl || liveOverlayStream) {
+        return;
+    }
+
+    try {
+        liveOverlayStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        videoEl.srcObject = liveOverlayStream;
+        overlay.classList.add('active');
+        if (tag) tag.textContent = 'Recording';
+    } catch (err) {
+        if (tag) tag.textContent = 'Blocked';
+    }
+}
+
+function stopLiveOverlay() {
+    const overlay = document.getElementById('liveOverlay');
+    const videoEl = document.getElementById('liveOverlayVideo');
+
+    if (liveOverlayStream) {
+        liveOverlayStream.getTracks().forEach((track) => track.stop());
+        liveOverlayStream = null;
+    }
+
+    if (videoEl) {
+        videoEl.srcObject = null;
+    }
+    if (overlay) {
+        overlay.classList.remove('active');
+    }
 }
 
 function resetCaptureUI() {
@@ -637,6 +724,7 @@ function setStatusState(type, state, label, hint) {
     tag.textContent = label;
     hintEl.textContent = hint;
 }
+
 
 function setStepState(id, state) {
     const el = document.getElementById(id);
