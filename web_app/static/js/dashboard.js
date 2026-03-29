@@ -100,7 +100,7 @@ async function startRecording() {
         setCaptureError();
         systemStatus.textContent = 'Error';
     } finally {
-        stopLivePreview();
+        stopLiveOverlay();
     }
 }
 
