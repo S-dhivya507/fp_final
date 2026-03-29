@@ -29,6 +29,7 @@ app = Flask(__name__)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+IS_RENDER = bool(os.getenv("RENDER")) or bool(os.getenv("RENDER_SERVICE_ID"))
 
 # Serve logo at root as a fallback to avoid 404s from cached/legacy URLs.
 @app.route("/logo.png")
@@ -212,7 +213,7 @@ def detect_emotions_from_video(duration=VIDEO_DURATION):
     return dict(face_counter), face_frames
 
 
-def detect_emotions_from_video_file(video_path, duration=VIDEO_DURATION):
+def detect_emotions_from_video_file(video_path, duration=VIDEO_DURATION, frame_step=1, allow_label_video=True):
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         raise Exception("Video file not accessible")
@@ -232,11 +233,12 @@ def detect_emotions_from_video_file(video_path, duration=VIDEO_DURATION):
     base = os.path.splitext(os.path.basename(video_path))[0]
     labeled_name = f"{base}_labeled.mp4"
     labeled_path = os.path.join(app.config["UPLOAD_FOLDER"], labeled_name)
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    writer = cv2.VideoWriter(labeled_path, fourcc, fps, (width, height))
-    if not writer.isOpened():
-        writer = None
-        labeled_path = None
+    if allow_label_video:
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        writer = cv2.VideoWriter(labeled_path, fourcc, fps, (width, height))
+        if not writer.isOpened():
+            writer = None
+            labeled_path = None
 
     face_counter = Counter()
     face_frames = 0
@@ -249,6 +251,8 @@ def detect_emotions_from_video_file(video_path, duration=VIDEO_DURATION):
         if not ret:
             break
         frame_idx += 1
+        if frame_step > 1 and (frame_idx % frame_step) != 0:
+            continue
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces, gray_used = detect_faces_multi(gray)
         emotions = detect_face_emotions_from_faces(gray_used, faces)
@@ -699,22 +703,32 @@ def upload_analysis():
 
             labeled_path = None
             try:
-                face_emotions, face_frames, labeled_path = detect_emotions_from_video_file(analysis_path, VIDEO_DURATION)
+                render_frame_step = 5 if IS_RENDER else 1
+                render_duration = 5 if IS_RENDER else VIDEO_DURATION
+                face_emotions, face_frames, labeled_path = detect_emotions_from_video_file(
+                    analysis_path,
+                    render_duration,
+                    frame_step=render_frame_step,
+                    allow_label_video=not IS_RENDER
+                )
             except Exception as e:
                 print("Upload video decode error:", e)
                 face_emotions = {}
                 face_frames = 0
                 video_error = f"Video decode failed: {e}"
 
-            preview_source = labeled_path if labeled_path else video_path
-            converted_name = convert_video_for_browser(preview_source, app.config["UPLOAD_FOLDER"], f"{timestamp}_upload")
-            if converted_name:
-                video_url = f"/uploads/{converted_name}"
-                video_preview_supported = True
-            else:
+            if IS_RENDER:
                 video_url = None
-                if not video_error:
-                    video_error = "Install FFmpeg to convert uploads into a browser-supported format."
+            else:
+                preview_source = labeled_path if labeled_path else video_path
+                converted_name = convert_video_for_browser(preview_source, app.config["UPLOAD_FOLDER"], f"{timestamp}_upload")
+                if converted_name:
+                    video_url = f"/uploads/{converted_name}"
+                    video_preview_supported = True
+                else:
+                    video_url = None
+                    if not video_error:
+                        video_error = "Install FFmpeg to convert uploads into a browser-supported format."
 
         if audio_file:
             audio_name = secure_filename(audio_file.filename) or f"audio_{timestamp}.wav"
