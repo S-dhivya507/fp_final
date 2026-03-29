@@ -702,20 +702,23 @@ def upload_analysis():
                     analysis_path = converted_path
 
             labeled_path = None
-            try:
-                render_frame_step = 5 if IS_RENDER else 1
-                render_duration = 5 if IS_RENDER else VIDEO_DURATION
-                face_emotions, face_frames, labeled_path = detect_emotions_from_video_file(
-                    analysis_path,
-                    render_duration,
-                    frame_step=render_frame_step,
-                    allow_label_video=not IS_RENDER
-                )
-            except Exception as e:
-                print("Upload video decode error:", e)
+            if IS_RENDER:
+                # Skip heavy face analysis on Render free tier to avoid timeouts.
                 face_emotions = {}
                 face_frames = 0
-                video_error = f"Video decode failed: {e}"
+            else:
+                try:
+                    face_emotions, face_frames, labeled_path = detect_emotions_from_video_file(
+                        analysis_path,
+                        VIDEO_DURATION,
+                        frame_step=1,
+                        allow_label_video=True
+                    )
+                except Exception as e:
+                    print("Upload video decode error:", e)
+                    face_emotions = {}
+                    face_frames = 0
+                    video_error = f"Video decode failed: {e}"
 
             if IS_RENDER:
                 video_url = None
