@@ -13,7 +13,10 @@ import numpy as np
 import pickle
 import librosa
 from scipy.io.wavfile import write, read
-from tensorflow.keras.models import load_model
+try:
+    import tf_keras as keras
+except Exception:
+    from tensorflow import keras
 from collections import Counter
 import time
 from datetime import datetime
@@ -44,8 +47,8 @@ def logo_svg():
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    face_model = load_model(os.path.join(BASE_DIR, "models", "face_emotion_model.h5"))
-    voice_model = load_model(os.path.join(BASE_DIR, "voice_module", "voice_emotion_model.h5"))
+    face_model = keras.models.load_model(os.path.join(BASE_DIR, "models", "face_emotion_model.h5"), compile=False)
+    voice_model = keras.models.load_model(os.path.join(BASE_DIR, "voice_module", "voice_emotion_model.h5"), compile=False)
     with open(os.path.join(BASE_DIR, "voice_module", "label_encoder.pkl"), "rb") as f:
         voice_encoder = pickle.load(f)
 
