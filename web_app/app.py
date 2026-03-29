@@ -10,7 +10,6 @@ import numpy as np
 import os
 import pickle
 import librosa
-import sounddevice as sd
 from scipy.io.wavfile import write, read
 from tensorflow.keras.models import load_model
 from collections import Counter
@@ -18,6 +17,11 @@ import time
 from datetime import datetime
 import shutil
 import subprocess
+
+try:
+    import sounddevice as sd
+except Exception:
+    sd = None
 
 app = Flask(__name__)
 
@@ -551,6 +555,11 @@ def roboto_font():
 @app.route("/api/start-recording", methods=["POST"])
 def start_recording():
     try:
+        if sd is None:
+            return jsonify({
+                "success": False,
+                "error": "Live server audio capture is not available in deployment. Use the browser live capture."
+            }), 400
         print("Starting video...")
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         face_emotions, video_name, face_frames = capture_video_with_emotions(5, f"{timestamp}_capture")
