@@ -3,11 +3,13 @@ Real-Time Stress & Emotion Detection Web Application
 Flask Web Dashboard for Final Year Project
 """
 
+import os
+os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
+
 from flask import Flask, render_template, jsonify, request, send_from_directory
 from werkzeug.utils import secure_filename
 import cv2
 import numpy as np
-import os
 import pickle
 import librosa
 from scipy.io.wavfile import write, read
