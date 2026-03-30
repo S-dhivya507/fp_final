@@ -698,7 +698,6 @@ def quick_analysis():
         }
 
         return jsonify(convert_numpy_to_python(response_data))
-
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -719,7 +718,10 @@ def upload_analysis():
             # Render free tier cannot handle heavy video + audio together.
             video_file = None
         elif IS_RENDER and video_file and not audio_file:
-            return jsonify({"success": False, "error": "Video analysis is disabled on Render free tier. Please upload an audio file."}), 400
+            return jsonify({
+                "success": False,
+                "error": "Video analysis is disabled on Render free tier. Please upload an audio file."
+            }), 400
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -738,13 +740,16 @@ def upload_analysis():
             analysis_path = video_path
             ext = os.path.splitext(video_path)[1].lower()
             if ext != ".mp4":
-                converted_path = convert_video_for_analysis(video_path, app.config["UPLOAD_FOLDER"], f"{timestamp}_upload")
+                converted_path = convert_video_for_analysis(
+                    video_path,
+                    app.config["UPLOAD_FOLDER"],
+                    f"{timestamp}_upload"
+                )
                 if converted_path:
                     analysis_path = converted_path
 
             labeled_path = None
             if IS_RENDER:
-                # Skip heavy face analysis on Render free tier to avoid timeouts.
                 face_emotions = {}
                 face_frames = 0
             else:
@@ -765,7 +770,11 @@ def upload_analysis():
                 video_url = None
             else:
                 preview_source = labeled_path if labeled_path else video_path
-                converted_name = convert_video_for_browser(preview_source, app.config["UPLOAD_FOLDER"], f"{timestamp}_upload")
+                converted_name = convert_video_for_browser(
+                    preview_source,
+                    app.config["UPLOAD_FOLDER"],
+                    f"{timestamp}_upload"
+                )
                 if converted_name:
                     video_url = f"/uploads/{converted_name}"
                     video_preview_supported = True
@@ -782,14 +791,22 @@ def upload_analysis():
 
             audio_ext = os.path.splitext(audio_path)[1].lower()
             if audio_ext != ".wav":
-                converted_audio = convert_audio_to_wav(audio_path, app.config["UPLOAD_FOLDER"], f"{timestamp}_upload")
+                converted_audio = convert_audio_to_wav(
+                    audio_path,
+                    app.config["UPLOAD_FOLDER"],
+                    f"{timestamp}_upload"
+                )
                 if converted_audio:
                     audio_path = converted_audio
                     audio_url = f"/uploads/{os.path.basename(converted_audio)}"
 
             voice_probs = detect_emotions_from_audio(audio_path)
         elif video_file:
-            extracted_audio = convert_audio_to_wav(video_path, app.config["UPLOAD_FOLDER"], f"{timestamp}_upload_from_video")
+            extracted_audio = convert_audio_to_wav(
+                video_path,
+                app.config["UPLOAD_FOLDER"],
+                f"{timestamp}_upload_from_video"
+            )
             if extracted_audio:
                 voice_probs = detect_emotions_from_audio(extracted_audio)
                 audio_url = f"/uploads/{os.path.basename(extracted_audio)}"
@@ -828,7 +845,6 @@ def upload_analysis():
             keep_files.append(os.path.basename(audio_url))
         cleanup_uploads(keep_files)
         return jsonify(convert_numpy_to_python(response_data))
-
     except Exception as e:
         print("UPLOAD ERROR:", e)
         return jsonify({"success": False, "error": str(e)}), 500
