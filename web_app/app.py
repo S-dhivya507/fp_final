@@ -44,14 +44,19 @@ def logo_svg():
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    face_model = keras.models.load_model(os.path.join(BASE_DIR, "models", "face_emotion_model.h5"), compile=False)
+    face_model = None
+    face_cascade = None
+
     voice_model = keras.models.load_model(os.path.join(BASE_DIR, "voice_module", "voice_emotion_model.h5"), compile=False)
     with open(os.path.join(BASE_DIR, "voice_module", "label_encoder.pkl"), "rb") as f:
         voice_encoder = pickle.load(f)
 
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-    if face_cascade.empty():
-        raise RuntimeError("Failed to load Haar cascade for face detection.")
+    if not IS_RENDER:
+        face_model = keras.models.load_model(os.path.join(BASE_DIR, "models", "face_emotion_model.h5"), compile=False)
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+        if face_cascade.empty():
+            raise RuntimeError("Failed to load Haar cascade for face detection.")
+
     # Capture expected voice input shape if available (e.g., (None, 40, 174, 1))
     voice_input_shape = getattr(voice_model, "input_shape", None)
     voice_expected_mfcc = None
@@ -157,6 +162,8 @@ def update_face_counter(frame, face_counter):
 
 
 def detect_face_emotions_from_faces(gray_used, faces):
+    if face_model is None:
+        return []
     # Always label only one face (largest) to avoid multiple boxes
     if len(faces) == 0:
         return []
