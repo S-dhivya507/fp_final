@@ -676,16 +676,22 @@ def quick_analysis():
 
 
 @app.route("/api/upload-analysis", methods=["POST"])
-def upload_analysis():
-    try:
-        if not models_loaded:
-            return jsonify({"success": False, "error": "Models not loaded. Check server logs."}), 500
+    def upload_analysis():
+        try:
+            if not models_loaded:
+                return jsonify({"success": False, "error": "Models not loaded. Check server logs."}), 500
 
         video_file = request.files.get("video")
         audio_file = request.files.get("audio")
 
         if not video_file and not audio_file:
             return jsonify({"success": False, "error": "No files uploaded"}), 400
+
+        if IS_RENDER and video_file and audio_file:
+            # Render free tier cannot handle heavy video + audio together.
+            video_file = None
+        elif IS_RENDER and video_file and not audio_file:
+            return jsonify({"success": False, "error": "Video analysis is disabled on Render free tier. Please upload an audio file."}), 400
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
