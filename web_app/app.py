@@ -42,34 +42,60 @@ def logo_svg():
 
 # ================= LOAD MODELS =================
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+face_model = None
+voice_model = None
+voice_encoder = None
+face_cascade = None
+voice_expected_mfcc = None
+voice_expected_frames = None
+models_loaded = False
+models_load_error = None
 
-try:
-    face_model = None
-    face_cascade = None
 
-    voice_model = keras.models.load_model(os.path.join(BASE_DIR, "voice_module", "voice_emotion_model.h5"), compile=False)
-    with open(os.path.join(BASE_DIR, "voice_module", "label_encoder.pkl"), "rb") as f:
-        voice_encoder = pickle.load(f)
+def load_models():
+    global face_model, voice_model, voice_encoder, face_cascade
+    global voice_expected_mfcc, voice_expected_frames, models_loaded, models_load_error
 
-    if not IS_RENDER:
-        face_model = keras.models.load_model(os.path.join(BASE_DIR, "models", "face_emotion_model.h5"), compile=False)
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-        if face_cascade.empty():
-            raise RuntimeError("Failed to load Haar cascade for face detection.")
+    if models_loaded:
+        return True
 
-    # Capture expected voice input shape if available (e.g., (None, 40, 174, 1))
-    voice_input_shape = getattr(voice_model, "input_shape", None)
-    voice_expected_mfcc = None
-    voice_expected_frames = None
-    if voice_input_shape and len(voice_input_shape) >= 3:
-        voice_expected_mfcc = voice_input_shape[1]
-        voice_expected_frames = voice_input_shape[2]
-    models_loaded = True
-    print("Models loaded")
-except Exception as e:
-    print("Model loading error:", e)
-    models_loaded = False
-    voice_encoder = None
+    try:
+        face_model = None
+        face_cascade = None
+
+        voice_model = keras.models.load_model(
+            os.path.join(BASE_DIR, "voice_module", "voice_emotion_model.h5"),
+            compile=False
+        )
+        with open(os.path.join(BASE_DIR, "voice_module", "label_encoder.pkl"), "rb") as f:
+            voice_encoder = pickle.load(f)
+
+        if not IS_RENDER:
+            face_model = keras.models.load_model(
+                os.path.join(BASE_DIR, "models", "face_emotion_model.h5"),
+                compile=False
+            )
+            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+            if face_cascade.empty():
+                raise RuntimeError("Failed to load Haar cascade for face detection.")
+
+        voice_input_shape = getattr(voice_model, "input_shape", None)
+        voice_expected_mfcc = None
+        voice_expected_frames = None
+        if voice_input_shape and len(voice_input_shape) >= 3:
+            voice_expected_mfcc = voice_input_shape[1]
+            voice_expected_frames = voice_input_shape[2]
+
+        models_loaded = True
+        models_load_error = None
+        print("Models loaded")
+        return True
+    except Exception as e:
+        models_load_error = str(e)
+        print("Model loading error:", e)
+        models_loaded = False
+        voice_encoder = None
+        return False
 
 # ================= CONFIG =================
 SAMPLE_RATE = 22050
@@ -567,6 +593,8 @@ def roboto_font():
 @app.route("/api/start-recording", methods=["POST"])
 def start_recording():
     try:
+        if not load_models():
+            return jsonify({"success": False, "error": f"Models not loaded: {models_load_error}"}), 500
         if sd is None:
             return jsonify({
                 "success": False,
@@ -676,10 +704,10 @@ def quick_analysis():
 
 
 @app.route("/api/upload-analysis", methods=["POST"])
-    def upload_analysis():
-        try:
-            if not models_loaded:
-                return jsonify({"success": False, "error": "Models not loaded. Check server logs."}), 500
+def upload_analysis():
+    try:
+        if not load_models():
+            return jsonify({"success": False, "error": f"Models not loaded: {models_load_error}"}), 500
 
         video_file = request.files.get("video")
         audio_file = request.files.get("audio")
