@@ -12,7 +12,6 @@ import numpy as np
 import pickle
 import librosa
 from scipy.io.wavfile import write, read
-from tensorflow import keras
 from collections import Counter
 import time
 from datetime import datetime
@@ -60,6 +59,7 @@ def load_models():
         return True
 
     try:
+        from tensorflow import keras
         face_model = None
         face_cascade = None
 
