@@ -587,7 +587,7 @@ def face_api_models(filename):
 
 @app.route("/Roboto-Regular.ttf")
 def roboto_font():
-    return send_from_directory("C:\\Windows\\Fonts", "arial.ttf")
+    return send_from_directory(os.path.join(app.root_path, "static"), "Roboto-Regular.ttf")
 
 
 @app.route("/api/start-recording", methods=["POST"])
@@ -752,6 +752,8 @@ def upload_analysis():
             if IS_RENDER:
                 face_emotions = {}
                 face_frames = 0
+                if not video_error:
+                    video_error = "Face analysis is disabled on Render free tier to avoid timeouts."
             else:
                 try:
                     face_emotions, face_frames, labeled_path = detect_emotions_from_video_file(
