@@ -147,6 +147,7 @@ def detect_faces_multi(gray):
     gray_eq = clahe.apply(gray)
     passes = [
         (gray_eq, 1.05, 3),
+        (gray_eq, 1.03, 2),
         (gray_eq, 1.1, 4),
         (gray, 1.05, 3),
     ]
@@ -154,10 +155,10 @@ def detect_faces_multi(gray):
     h, w = gray.shape[:2]
     if h < 60 or w < 60:
         return (), gray_eq
-    min_w = max(int(w * 0.2), 80)
-    min_h = max(int(h * 0.2), 80)
-    max_w = int(w * 0.8)
-    max_h = int(h * 0.8)
+    min_w = max(int(w * 0.12), 40)
+    min_h = max(int(h * 0.12), 40)
+    max_w = int(w * 0.95)
+    max_h = int(h * 0.95)
     min_w = min(min_w, w)
     min_h = min(min_h, h)
     max_w = min(max_w, w)
