@@ -309,7 +309,10 @@ function displayResults(data) {
     if (face_emotions) {
         const faceMap = ensureEmotionMap(face_emotions);
         displayEmotionBars('faceEmotions', faceMap, 'Face Analysis');
-        if (data.face_detected === false) {
+        if (data.face_error) {
+            const faceContainer = document.getElementById('faceEmotions');
+            faceContainer.innerHTML = `<div class="empty-inline">${data.face_error}</div>`;
+        } else if (data.face_detected === false) {
             const faceContainer = document.getElementById('faceEmotions');
             faceContainer.innerHTML = '<div class="empty-inline">No face detected. Please face the camera directly and try again.</div>';
         }

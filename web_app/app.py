@@ -643,6 +643,10 @@ def start_recording():
         face_emotions_percent = face_counts_to_percentages(face_emotions)
         voice_emotions_percent = voice_probs_to_percentages(voice_probs)
 
+        face_error = None
+        if face_frames == 0:
+            face_error = "No face detected. Please face the camera directly and try again."
+
         response_data = {
             "success": True,
             "face_emotions": face_emotions_percent,
@@ -657,6 +661,7 @@ def start_recording():
             "face_frames": face_frames,
             "video_preview_supported": video_preview_supported,
             "video_error": video_error,
+            "face_error": face_error,
         }
 
         response_data = convert_numpy_to_python(response_data)
@@ -733,6 +738,7 @@ def upload_analysis():
         face_frames = 0
         video_preview_supported = False
         video_error = None
+        face_error = None
 
         if video_file:
             video_name = secure_filename(video_file.filename) or f"video_{timestamp}.mp4"
@@ -753,8 +759,9 @@ def upload_analysis():
             if IS_RENDER:
                 face_emotions = {}
                 face_frames = 0
+                face_error = "Face analysis is disabled on Render free tier to avoid timeouts."
                 if not video_error:
-                    video_error = "Face analysis is disabled on Render free tier to avoid timeouts."
+                    video_error = face_error
             else:
                 try:
                     face_emotions, face_frames, labeled_path = detect_emotions_from_video_file(
@@ -825,6 +832,9 @@ def upload_analysis():
         face_emotions_percent = face_counts_to_percentages(face_emotions)
         voice_emotions_percent = voice_probs_to_percentages(voice_probs)
 
+        if face_frames == 0 and not face_error:
+            face_error = "No face detected. Please face the camera directly and try again."
+
         response_data = {
             "success": True,
             "face_emotions": face_emotions_percent,
@@ -839,6 +849,7 @@ def upload_analysis():
             "face_frames": face_frames,
             "video_preview_supported": video_preview_supported,
             "video_error": video_error,
+            "face_error": face_error,
         }
 
         keep_files = []
