@@ -106,6 +106,15 @@ face_labels = ["Angry", "Disgust", "Fear", "Happy", "Neutral", "Sad", "Surprise"
 clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 
 
+def normalize_emotion_label(label):
+    if not label:
+        return label
+    mapping = {
+        "Anger": "Angry",
+    }
+    return mapping.get(label, label)
+
+
 # ================= UTILITY =================
 def convert_numpy_to_python(obj):
     if isinstance(obj, np.ndarray):
@@ -522,11 +531,12 @@ def fuse_emotions(face_data, voice_probs):
     for emotion in face_labels:
         face_val = (face_data.get(emotion, 0) / total_face * 100) if total_face else 0
 
-        if voice_probs is not None and voice_encoder and emotion in voice_encoder.classes_:
-            idx = list(voice_encoder.classes_).index(emotion)
-            voice_val = float(voice_probs[idx] * 100)
-        else:
-            voice_val = 0
+        voice_val = 0
+        if voice_probs is not None and voice_encoder:
+            for idx, label in enumerate(voice_encoder.classes_):
+                if normalize_emotion_label(label) == emotion and idx < len(voice_probs):
+                    voice_val = float(voice_probs[idx] * 100)
+                    break
 
         fused = face_val * 0.6 + voice_val * 0.4
         results[emotion] = round(fused, 2)
@@ -539,8 +549,9 @@ def voice_probs_to_percentages(voice_probs):
         return {label: 0 for label in face_labels}
     results = {label: 0 for label in face_labels}
     for idx, label in enumerate(voice_encoder.classes_):
-        if idx < len(voice_probs) and label in results:
-            results[label] = round(float(voice_probs[idx] * 100), 2)
+        normalized = normalize_emotion_label(label)
+        if idx < len(voice_probs) and normalized in results:
+            results[normalized] = round(float(voice_probs[idx] * 100), 2)
     return results
 
 
@@ -652,7 +663,7 @@ def start_recording():
             "face_emotions": face_emotions_percent,
             "voice_probs": voice_probs.tolist() if voice_probs is not None else None,
             "voice_emotions": voice_emotions_percent,
-            "voice_labels": list(voice_encoder.classes_) if voice_encoder is not None else [],
+            "voice_labels": [normalize_emotion_label(l) for l in voice_encoder.classes_] if voice_encoder is not None else [],
             "fused_emotions": fused_emotions,
             "stress_level": stress_level,
             "video_file": f"/uploads/{video_name}" if video_name else None,
@@ -840,7 +851,7 @@ def upload_analysis():
             "face_emotions": face_emotions_percent,
             "voice_probs": voice_probs.tolist() if voice_probs is not None else None,
             "voice_emotions": voice_emotions_percent,
-            "voice_labels": list(voice_encoder.classes_) if voice_encoder is not None else [],
+            "voice_labels": [normalize_emotion_label(l) for l in voice_encoder.classes_] if voice_encoder is not None else [],
             "fused_emotions": fused_emotions,
             "stress_level": stress_level,
             "video_file": video_url,
